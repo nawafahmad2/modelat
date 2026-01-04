@@ -324,20 +324,38 @@
                     className: 'block text-xs sm:text-sm font-medium text-gray-700 mb-2'
                 }, label),
                 type === 'file' ? [
-                    React.createElement('input', {
-                        type: 'file',
-                        accept: 'image/*',
-                        onChange: onFileChange,
-                        className: 'w-full p-3 border border-gray-300 rounded-lg text-sm',
-                        key: 'input'
-                    }),
-                    preview && React.createElement('img', {
-                        src: preview,
-                        alt: 'معاينة',
-                        className: 'mt-2 rounded-lg max-w-full',
-                        style: { height: 'auto', maxHeight: '200px', objectFit: 'contain' },
-                        key: 'preview'
-                    })
+                    React.createElement('div', {
+                        className: 'mb-3',
+                        key: 'file-wrapper'
+                    }, [
+                        React.createElement('div', {
+                            className: 'relative inline-block w-full',
+                            key: 'file-button-wrapper'
+                        },
+                            React.createElement('input', {
+                                type: 'file',
+                                accept: 'image/*',
+                                onChange: onFileChange,
+                                id: 'image-input-' + Math.random(),
+                                style: { display: 'none' },
+                                key: 'input'
+                            }),
+                            React.createElement('label', {
+                                htmlFor: 'image-input-' + Math.random(),
+                                className: 'w-full block px-4 py-4 border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 text-center cursor-pointer hover:bg-blue-100 transition text-sm sm:text-base font-medium text-blue-700'
+                            }, '📷 اضغط لاختيار الصورة')
+                        ),
+                        preview && React.createElement('div', {
+                            className: 'mt-4 rounded-lg overflow-hidden bg-gray-100',
+                            key: 'preview-wrapper'
+                        },
+                            React.createElement('img', {
+                                src: preview,
+                                alt: 'معاينة',
+                                className: 'w-full h-auto max-h-64 object-contain p-2'
+                            })
+                        )
+                    ])
                 ] : type === 'textarea' ? 
                     React.createElement('textarea', {
                         value: value,
