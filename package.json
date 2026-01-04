@@ -1,0 +1,19 @@
+{
+  "name": "fashion-catalog",
+  "version": "1.0.0",
+  "description": "تطبيق ويب حديث لإدارة وعرض كتالوج الفساتين والموديلات",
+  "keywords": [
+    "fashion",
+    "catalog",
+    "dress",
+    "modena",
+    "react",
+    "vercel"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}

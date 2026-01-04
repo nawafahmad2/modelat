@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كتالوج الفساتين</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script>
+        const { useState, useEffect } = React;
+        
+        // تخزين البيانات
+        let productsDB = [];
+
+        // دالة لإرسال البيانات إلى API
+        const sendToAPI = async (products) => {
+            try {
+                const response = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        products: products,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    console.log('✅ تم إرسال البيانات بنجاح:', data);
+                    alert(`✅ ${data.message}\nعدد المنتجات: ${data.data.productsCount}`);
+                } else {
+                    console.error('❌ خطأ في الإرسال:', data);
+                    alert(`❌ خطأ: ${data.message}`);
+                }
+            } catch (error) {
+                console.error('❌ خطأ في الاتصال:', error);
+                alert(`❌ حدث خطأ في الاتصال بالخادم: ${error.message}`);
+            }
+        };
+
+        const FashionCatalog = () => {
+            const [products, setProducts] = useState(productsDB);
+            const [showAddForm, setShowAddForm] = useState(false);
+            const [selectedProduct, setSelectedProduct] = useState(null);
+            const [editingProduct, setEditingProduct] = useState(null);
+
+            const saveProduct = (product) => {
+                let updatedProducts;
+                const existingIndex = products.findIndex(p => p.id === product.id);
+                
+                if (existingIndex >= 0) {
+                    updatedProducts = [...products];
+                    updatedProducts[existingIndex] = product;
+                } else {
+                    updatedProducts = [...products, product];
+                }
+                
+                productsDB = updatedProducts;
+                setProducts(updatedProducts);
+            };
+
+            const deleteProduct = (productId) => {
+                if (window.confirm('هل أنت متأكد من حذف هذا الموديل؟')) {
+                    const updatedProducts = products.filter(p => p.id !== productId);
+                    productsDB = updatedProducts;
+                    setProducts(updatedProducts);
+                }
+            };
+
+            useEffect(() => {
+                const params = new URLSearchParams(window.location.search);
+                const productId = params.get('product');
+                if (productId && products.length > 0) {
+                    const product = products.find(p => p.id === productId);
+                    if (product) {
+                        setSelectedProduct(product);
+                    }
+                }
+            }, [products]);
+
+            return React.createElement('div', {
+                className: 'min-h-screen bg-gradient-to-br from-pink-50 to-purple-50',
+                style: { direction: 'rtl' }
+            }, [
+                React.createElement('div', { className: 'bg-white shadow-md', key: 'header' }, 
+                    React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-6' },
+                        React.createElement('div', { className: 'flex justify-between items-center flex-wrap gap-4' }, [
+                            React.createElement('div', { key: 'title' }, [
+                                React.createElement('h1', { className: 'text-3xl font-bold text-gray-800' }, 'كتالوج الفساتين'),
+                                React.createElement('p', { className: 'text-gray-600 mt-1' }, 'إدارة الموديلات بسهولة')
+                            ]),
+                            React.createElement('div', { className: 'flex gap-2 flex-wrap', key: 'buttons' }, [
+                                React.createElement('button', {
+                                    onClick: () => setShowAddForm(true),
+                                    className: 'bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow-lg',
+                                    key: 'add-btn'
+                                }, '➕ إضافة موديل جديد'),
+                                React.createElement('button', {
+                                    onClick: () => products.length > 0 && sendToAPI(products),
+                                    className: `${products.length > 0 ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400'} text-white px-6 py-3 rounded-lg transition shadow-lg`,
+                                    disabled: products.length === 0,
+                                    key: 'send-btn'
+                                }, `📤 إرسال البيانات (${products.length})`)
+                            ])
+                        ])
+                    )
+                ),
+                React.createElement('div', { className: 'max-w-7xl mx-auto px-4 py-8', key: 'content' },
+                    products.length === 0 ?
+                        React.createElement('div', { className: 'text-center py-16' }, [
+                            React.createElement('div', { className: 'text-gray-400 mb-4', style: { fontSize: '64px' } }, '➕'),
+                            React.createElement('h3', { className: 'text-xl text-gray-600 mb-2' }, 'لا توجد موديلات بعد'),
+                            React.createElement('p', { className: 'text-gray-500' }, 'ابدأ بإضافة أول موديل لك')
+                        ]) :
+                        React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' },
+                            products.map((product) =>
+                                React.createElement(ProductCard, {
+                                    key: product.id,
+                                    product: product,
+                                    onView: () => setSelectedProduct(product),
+                                    onEdit: () => setEditingProduct(product),
+                                    onDelete: () => deleteProduct(product.id)
+                                })
+                            )
+                        )
+                ),
+                showAddForm && React.createElement(ProductForm, {
+                    key: 'add-form',
+                    onSave: (product) => {
+                        saveProduct(product);
+                        setShowAddForm(false);
+                    },
+                    onCancel: () => setShowAddForm(false)
+                }),
+                editingProduct && React.createElement(ProductForm, {
+                    key: 'edit-form',
+                    product: editingProduct,
+                    onSave: (product) => {
+                        saveProduct(product);
+                        setEditingProduct(null);
+                    },
+                    onCancel: () => setEditingProduct(null)
+                }),
+                selectedProduct && React.createElement(ProductView, {
+                    key: 'view',
+                    product: selectedProduct,
+                    onClose: () => setSelectedProduct(null)
+                })
+            ]);
+        };
+
+        const ProductCard = ({ product, onView, onEdit, onDelete }) => {
+            return React.createElement('div', {
+                className: 'bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition'
+            }, [
+                React.createElement('div', {
+                    className: 'relative bg-gray-100',
+                    style: { height: '256px' },
+                    key: 'img'
+                },
+                    React.createElement('img', {
+                        src: product.image,
+                        alt: product.modelNumber,
+                        className: 'w-full h-full object-cover'
+                    })
+                ),
+                React.createElement('div', { className: 'p-4', key: 'details' }, [
+                    React.createElement('h3', {
+                        className: 'text-xl font-bold text-gray-800 mb-2'
+                    }, `موديل ${product.modelNumber}`),
+                    product.colors && React.createElement('p', {
+                        className: 'text-sm text-gray-600 mb-1'
+                    }, `الألوان: ${product.colors}`),
+                    product.sizes && React.createElement('p', {
+                        className: 'text-sm text-gray-600 mb-1'
+                    }, `القياسات: ${product.sizes}`),
+                    product.price && React.createElement('p', {
+                        className: 'text-lg font-bold text-green-600 mb-2'
+                    }, product.price),
+                    product.season && React.createElement('p', {
+                        className: 'text-sm text-purple-600 mb-3'
+                    }, `🌤️ ${product.season}`),
+                    React.createElement('div', { className: 'flex gap-2' }, [
+                        React.createElement('button', {
+                            onClick: onView,
+                            className: 'flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition text-sm'
+                        }, '👁️ عرض'),
+                        React.createElement('button', {
+                            onClick: onEdit,
+                            className: 'flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition text-sm'
+                        }, '✏️ تعديل'),
+                        React.createElement('button', {
+                            onClick: onDelete,
+                            className: 'bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition text-sm'
+                        }, '🗑️')
+                    ])
+                ])
+            ]);
+        };
+
+        const ProductForm = ({ product, onSave, onCancel }) => {
+            const [formData, setFormData] = useState(product || {
+                id: Date.now().toString(),
+                image: '',
+                modelNumber: '',
+                sizes: '',
+                colors: '',
+                dozenCount: '',
+                price: '',
+                season: '',
+                description: ''
+            });
+            const [imagePreview, setImagePreview] = useState(product?.image || '');
+
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setImagePreview(reader.result);
+                        setFormData({ ...formData, image: reader.result });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleSubmit = () => {
+                if (!formData.image || !formData.modelNumber) {
+                    alert('الرجاء إضافة صورة ورقم الموديل على الأقل');
+                    return;
+                }
+                onSave(formData);
+            };
+
+            return React.createElement('div', {
+                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50',
+                style: { overflowY: 'auto' }
+            },
+                React.createElement('div', { className: 'bg-white rounded-lg shadow-xl max-w-2xl w-full my-8' },
+                    React.createElement('div', { className: 'p-6' }, [
+                        React.createElement('div', { className: 'flex justify-between items-center mb-6' }, [
+                            React.createElement('h2', {
+                                className: 'text-2xl font-bold text-gray-800'
+                            }, product ? 'تعديل الموديل' : 'إضافة موديل جديد'),
+                            React.createElement('button', {
+                                onClick: onCancel,
+                                className: 'text-gray-500 hover:text-gray-700 text-2xl'
+                            }, '✕')
+                        ]),
+                        React.createElement('div', { className: 'space-y-4' }, [
+                            FormField('صورة الفستان *', 'file', formData.image, null, handleImageUpload, imagePreview),
+                            FormField('رقم الموديل *', 'text', formData.modelNumber, (v) => setFormData({...formData, modelNumber: v}), null, null, 'مثال: F001'),
+                            FormField('القياسات المتوفرة', 'text', formData.sizes, (v) => setFormData({...formData, sizes: v}), null, null, 'مثال: 38, 40, 42, 44'),
+                            FormField('الألوان المتوفرة', 'text', formData.colors, (v) => setFormData({...formData, colors: v}), null, null, 'مثال: برتقالي، أحمر، أزرق'),
+                            FormField('العدد في الدرزن', 'text', formData.dozenCount, (v) => setFormData({...formData, dozenCount: v}), null, null, 'مثال: 12 قطعة'),
+                            FormField('السعر', 'text', formData.price, (v) => setFormData({...formData, price: v}), null, null, 'مثال: 50,000 دينار'),
+                            FormField('الموسم', 'select', formData.season, (v) => setFormData({...formData, season: v})),
+                            FormField('وصف إضافي', 'textarea', formData.description, (v) => setFormData({...formData, description: v}), null, null, 'أي معلومات إضافية...')
+                        ]),
+                        React.createElement('div', { className: 'flex gap-3 pt-4' }, [
+                            React.createElement('button', {
+                                onClick: handleSubmit,
+                                className: 'flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition'
+                            }, '💾 حفظ'),
+                            React.createElement('button', {
+                                onClick: onCancel,
+                                className: 'flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 transition'
+                            }, 'إلغاء')
+                        ])
+                    ])
+                )
+            );
+        };
+
+        const FormField = (label, type, value, onChange, onFileChange, preview, placeholder) => {
+            return React.createElement('div', {}, [
+                React.createElement('label', {
+                    className: 'block text-sm font-medium text-gray-700 mb-2'
+                }, label),
+                type === 'file' ? [
+                    React.createElement('input', {
+                        type: 'file',
+                        accept: 'image/*',
+                        onChange: onFileChange,
+                        className: 'w-full p-2 border border-gray-300 rounded-lg',
+                        key: 'input'
+                    }),
+                    preview && React.createElement('img', {
+                        src: preview,
+                        alt: 'معاينة',
+                        className: 'mt-2 rounded-lg',
+                        style: { height: '160px', objectFit: 'contain' },
+                        key: 'preview'
+                    })
+                ] : type === 'textarea' ? 
+                    React.createElement('textarea', {
+                        value: value,
+                        onChange: (e) => onChange(e.target.value),
+                        className: 'w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+                        rows: 3,
+                        placeholder: placeholder
+                    }) : type === 'select' ?
+                    React.createElement('select', {
+                        value: value,
+                        onChange: (e) => onChange(e.target.value),
+                        className: 'w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
+                    }, [
+                        React.createElement('option', { value: '' }, 'اختر الموسم'),
+                        React.createElement('option', { value: 'صيفي' }, 'صيفي'),
+                        React.createElement('option', { value: 'شتوي' }, 'شتوي'),
+                        React.createElement('option', { value: 'ربيعي' }, 'ربيعي'),
+                        React.createElement('option', { value: 'خريفي' }, 'خريفي'),
+                        React.createElement('option', { value: 'جميع المواسم' }, 'جميع المواسم')
+                    ]) :
+                    React.createElement('input', {
+                        type: type,
+                        value: value,
+                        onChange: (e) => onChange(e.target.value),
+                        className: 'w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+                        placeholder: placeholder
+                    })
+            ]);
+        };
+
+        const ProductView = ({ product, onClose }) => {
+            const productUrl = `${window.location.origin}${window.location.pathname}?product=${product.id}`;
+
+            return React.createElement('div', {
+                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50',
+                style: { overflowY: 'auto' }
+            },
+                React.createElement('div', { className: 'bg-white rounded-lg shadow-xl max-w-4xl w-full my-8' },
+                    React.createElement('div', { className: 'p-6' }, [
+                        React.createElement('div', { className: 'flex justify-between items-center mb-6' }, [
+                            React.createElement('h2', {
+                                className: 'text-2xl font-bold text-gray-800'
+                            }, `موديل ${product.modelNumber}`),
+                            React.createElement('button', {
+                                onClick: onClose,
+                                className: 'text-gray-500 hover:text-gray-700 text-2xl'
+                            }, '✕')
+                        ]),
+                        React.createElement('div', { className: 'grid md:grid-cols-2 gap-6' }, [
+                            React.createElement('div', {},
+                                React.createElement('img', {
+                                    src: product.image,
+                                    alt: product.modelNumber,
+                                    className: 'w-full h-auto rounded-lg shadow-lg'
+                                })
+                            ),
+                            React.createElement('div', { className: 'space-y-4' }, [
+                                DetailBox('رقم الموديل', product.modelNumber),
+                                product.sizes && DetailBox('القياسات المتوفرة', product.sizes),
+                                product.colors && DetailBox('الألوان المتوفرة', product.colors),
+                                product.dozenCount && DetailBox('العدد في الدرزن', product.dozenCount),
+                                product.price && DetailBox('💰 السعر', product.price, 'green'),
+                                product.season && DetailBox('🌤️ الموسم', product.season, 'purple'),
+                                product.description && DetailBox('وصف إضافي', product.description),
+                                React.createElement('div', { className: 'bg-blue-50 p-4 rounded-lg border-2 border-blue-200' }, [
+                                    React.createElement('h3', { className: 'font-bold text-lg mb-2' }, '📱 رابط المنتج'),
+                                    React.createElement('p', { className: 'text-sm text-gray-600 mb-2', style: { wordBreak: 'break-all' } }, productUrl),
+                                    React.createElement('a', {
+                                        href: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(productUrl)}`,
+                                        download: `QR_${product.modelNumber}.png`,
+                                        className: 'inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm'
+                                    }, 'تحميل QR Code')
+                                ])
+                            ])
+                        ])
+                    ])
+                )
+            );
+        };
+
+        const DetailBox = (title, value, color) => {
+            const bgColor = color === 'green' ? 'bg-green-50 border-2 border-green-200' : 
+                           color === 'purple' ? 'bg-purple-50' : 'bg-gray-50';
+            return React.createElement('div', { className: `${bgColor} p-4 rounded-lg` }, [
+                React.createElement('h3', { className: 'font-bold text-lg mb-2' }, title),
+                React.createElement('p', { className: color === 'green' ? 'text-gray-700 text-xl' : 'text-gray-700' }, value)
+            ]);
+        };
+
+        ReactDOM.render(
+            React.createElement(FashionCatalog),
+            document.getElementById('root')
+        );
+    </script>
+</body>
+</html>
